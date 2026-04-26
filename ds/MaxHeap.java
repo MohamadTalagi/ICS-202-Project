@@ -1,5 +1,6 @@
 package kfupm.clinic.ds;
 
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 
@@ -13,11 +14,19 @@ import java.util.List;
  */
 public class MaxHeap<T> {
 
-    protected final Comparator<T> comparator;
+    private final Comparator<T> comparator;
+    private final ArrayList<T> heap;
 
     public MaxHeap(Comparator<T> comparator) {
         if (comparator == null) throw new IllegalArgumentException("comparator is null");
         this.comparator = comparator;
+    }
+    public boolean isEmpty() {
+        return heap.isEmpty();
+    }
+    public T peek() {
+        if (heap.isEmpty()) return null;
+        return heap.get(0);
     }
 
     public void push(T item) { throw new UnsupportedOperationException("TODO: MaxHeap.push"); }
