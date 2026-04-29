@@ -7,6 +7,9 @@ import java.util.List;
 
 import kfupm.clinic.api.Result;
 import kfupm.clinic.ds.*;
+import kfupm.clinic.matching.KMPMatcher;
+import kfupm.clinic.matching.NaiveMatcher;
+import kfupm.clinic.matching.StringMatcher;
 import kfupm.clinic.model.*;
 
 /**

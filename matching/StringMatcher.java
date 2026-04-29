@@ -1,4 +1,4 @@
-package kfupm.clinic.service;
+package kfupm.clinic.matching;
 
 /** Returns true if pattern occurs in text. */
 public interface StringMatcher {
