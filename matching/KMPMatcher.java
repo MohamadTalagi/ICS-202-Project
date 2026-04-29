@@ -1,4 +1,4 @@
-package kfupm.clinic.service;
+package kfupm.clinic.matching;
 
 public class KMPMatcher implements StringMatcher {
     @Override
