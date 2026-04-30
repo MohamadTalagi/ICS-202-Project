@@ -124,7 +124,18 @@ public class ClinicServiceImpl implements ClinicService {
     @Override
     public Result<VisitLogEntry> serveNext(String doctor, String note) {
         // TODO: serving policy: urgent > walk-in > earliest appointment
-        // TODO: append log entry, record undo
+        //  append log entry ----> DONE       TODO: record undo
+        VisitLogEntry entry = new VisitLogEntry(
+                System.currentTimeMillis(),
+                patient.id(),
+                patient.name(),
+                type,
+                doctor,
+                note
+        );
+
+        log.addLast(entry);
+
         throw new UnsupportedOperationException("TODO: ClinicServiceImpl.serveNext");
     }
 
@@ -135,14 +146,29 @@ public class ClinicServiceImpl implements ClinicService {
 
     @Override
     public List<VisitLogEntry> searchLogNaive(String pattern) {
-        // TODO: iterate log entries; match pattern in note using NaiveMatcher
-        throw new UnsupportedOperationException("TODO: ClinicServiceImpl.searchLogNaive");
+        List<VisitLogEntry> occurances = new ArrayList<>();
+        List<VisitLogEntry> entries = log.toList();
+        StringMatcher matcher = new NaiveMatcher();
+        for (VisitLogEntry entry : entries) {
+            if(matcher.contains(entry.notes(), pattern)){
+                occurances.add(entry);
+            }
+        }
+        return occurances;
+
     }
 
     @Override
     public List<VisitLogEntry> searchLogKmp(String pattern) {
-        // TODO: iterate log entries; match pattern in note using KMPMatcher
-        throw new UnsupportedOperationException("TODO: ClinicServiceImpl.searchLogKmp");
+        List<VisitLogEntry> occurances = new ArrayList<>();
+        List<VisitLogEntry> entries = log.toList();
+        StringMatcher matcher = new KMPMatcher();
+        for (VisitLogEntry entry : entries) {
+            if(matcher.contains(entry.notes(), pattern)){
+                occurances.add(entry);
+            }
+        }
+        return occurances;
     }
 
     @Override
