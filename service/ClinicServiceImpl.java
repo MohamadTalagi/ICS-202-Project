@@ -134,9 +134,51 @@ public class ClinicServiceImpl implements ClinicService {
 
     @Override
     public Result<VisitLogEntry> serveNext(String doctor, String note) {
-        // TODO: serving policy: urgent > walk-in > earliest appointment
-        //  append log entry ----> DONE       TODO: record undo
-        VisitLogEntry entry = new VisitLogEntry(
+        if (doctor == null || doctor.isBlank()) {
+            return Result.fail("Doctor is required.");
+        }
+
+        Patient patient;
+        String type;
+
+        // 1. Serve urgent patients first
+        if (!urgentHeap.isEmpty()) {
+            UrgentPatient urgent = urgentHeap.pop();
+            patient = urgent.patient();
+            type = "URGENT";
+        }
+
+        // 2. Then serve walk-ins
+        else if (!walkIns.isEmpty()) {
+            patient = walkIns.dequeue();
+            type = "WALKIN";
+        }
+
+        // 3. Then serve earliest appointment
+        else {
+            AVLTree.Entry<AppointmentKey, Appointment> entry = apptsByTime.minEntry();
+
+            if (entry == null) {
+                return Result.fail("No patients waiting.");
+            }
+
+            Appointment appt = entry.value();
+
+            apptsByTime.remove(entry.key());
+            apptsById.remove(appt.appointmentId());
+
+            Patient existingPatient = patientsById.get(appt.patientId());
+
+            if (existingPatient != null) {
+                patient = existingPatient;
+            } else {
+                patient = new Patient(appt.patientId(), appt.patientName(), appt.phone());
+            }
+
+            type = "APPOINTMENT";
+        }
+
+        VisitLogEntry logEntry = new VisitLogEntry(
                 System.currentTimeMillis(),
                 patient.id(),
                 patient.name(),
@@ -145,9 +187,9 @@ public class ClinicServiceImpl implements ClinicService {
                 note
         );
 
-        log.addLast(entry);
+        log.addLast(logEntry);
 
-        throw new UnsupportedOperationException("TODO: ClinicServiceImpl.serveNext");
+        return Result.ok(logEntry, "Patient served.");
     }
 
     @Override
