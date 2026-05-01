@@ -1,9 +1,8 @@
 package kfupm.clinic.ds;
-import java.util.ArrayList;
 
+import java.util.ArrayList;
 import java.util.List;
 
-/** Students implement. */
 public class SinglyLinkedList<T> {
 
     private static class Node<T> {
@@ -20,7 +19,9 @@ public class SinglyLinkedList<T> {
     private int size;
 
     public void addLast(T item) {
-        if (item == null) throw new IllegalArgumentException("item is null");
+        if (item == null) {
+            throw new IllegalArgumentException("item is null");
+        }
 
         Node<T> newNode = new Node<>(item);
 
@@ -34,9 +35,41 @@ public class SinglyLinkedList<T> {
         size++;
     }
 
+    public void addFirst(T item) {
+        if (item == null) {
+            throw new IllegalArgumentException("item is null");
+        }
+
+        Node<T> newNode = new Node<>(item);
+
+        if (head == null) {
+            head = tail = newNode;
+        } else {
+            newNode.next = head;
+            head = newNode;
+        }
+
+        size++;
+    }
+
+    public T removeFirst() {
+        if (head == null) {
+            return null;
+        }
+
+        T data = head.data;
+        head = head.next;
+
+        if (head == null) {
+            tail = null;
+        }
+
+        size--;
+        return data;
+    }
+
     public List<T> toList() {
         List<T> list = new ArrayList<>();
-
         Node<T> current = head;
 
         while (current != null) {
@@ -45,5 +78,9 @@ public class SinglyLinkedList<T> {
         }
 
         return list;
+    }
+
+    public int size() {
+        return size;
     }
 }
