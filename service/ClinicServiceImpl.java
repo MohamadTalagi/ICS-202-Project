@@ -104,8 +104,21 @@ public class ClinicServiceImpl implements ClinicService {
 
     @Override
     public Result<Void> addWalkIn(String patientId) {
-        // TODO: ensure patient exists; enqueue; record undo
-        throw new UnsupportedOperationException("TODO: ClinicServiceImpl.addWalkIn");
+        if (patientId == null || patientId.isBlank()) {
+            return Result.fail("Patient ID is required.");
+        }
+
+        Patient patient = patientsById.get(patientId);
+
+        if (patient == null) {
+            return Result.fail("Patient not found.");
+        }
+
+        walkIns.enqueue(patient);
+
+        undoStack.push(new Action(ActionType.ADD_WALKIN, patient));
+
+        return Result.ok(null, "Walk-in patient added.");
     }
 
     @Override
@@ -116,8 +129,31 @@ public class ClinicServiceImpl implements ClinicService {
 
     @Override
     public Result<Void> addUrgent(String patientId, int severity) {
-        // TODO: validate severity; ensure patient exists; heap push; record undo
-        throw new UnsupportedOperationException("TODO: ClinicServiceImpl.addUrgent");
+        if (patientId == null || patientId.isBlank()) {
+            return Result.fail("Patient ID is required.");
+        }
+
+        if (severity <= 0) {
+            return Result.fail("Severity must be positive.");
+        }
+
+        Patient patient = patientsById.get(patientId);
+
+        if (patient == null) {
+            return Result.fail("Patient not found.");
+        }
+
+        UrgentPatient urgentPatient = new UrgentPatient(
+                patient,
+                severity,
+                System.currentTimeMillis()
+        );
+
+        urgentHeap.push(urgentPatient);
+
+        undoStack.push(new Action(ActionType.ADD_URGENT, urgentPatient));
+
+        return Result.ok(null, "Urgent patient added.");
     }
 
     @Override
