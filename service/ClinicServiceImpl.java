@@ -72,32 +72,108 @@ public class ClinicServiceImpl implements ClinicService {
 
     @Override
     public Result<String> addAppointment(String patientId, LocalDate date, LocalTime time, String doctor) {
-        // TODO: ensure patient exists; create appointmentId; insert into AVL + hash; record undo
-        throw new UnsupportedOperationException("TODO: ClinicServiceImpl.addAppointment");
+        if (patientId == null) {
+            return Result.fail("Patient ID is required");
+        }
+
+        Patient patient = patientsById.get(patientId);
+        if (patient == null) {
+            return Result.fail("Patient not found");
+        }
+
+        String appointmentId = newAppointmentId();
+        Appointment appointment = new Appointment(
+                appointmentId,
+                patient.id(),
+                patient.name(),
+                patient.phone(),
+                date,
+                time,
+                doctor
+        );
+
+        AppointmentKey key = new AppointmentKey(date, time, appointmentId);
+
+        apptsById.put(appointmentId, appointment);
+        apptsByTime.put(key, appointment);
+
+        undoStack.push(new Action(ActionType.ADD_APPT, appointment));
+
+        return Result.ok(appointmentId, "Appointment scheduled successfully.");
     }
 
     @Override
     public Result<Void> cancelAppointment(String appointmentId) {
-        // TODO: use hash to find appt; remove from AVL + hash; record undo
-        throw new UnsupportedOperationException("TODO: ClinicServiceImpl.cancelAppointment");
+        if (appointmentId == null) {
+            return Result.fail("Appointment ID is required.");
+        }
+
+        Appointment appointment = apptsById.remove(appointmentId);
+        if (appointment == null) {
+            return Result.fail("Appointment not found.");
+        }
+
+        AppointmentKey key = new AppointmentKey(
+                appointment.date(),
+                appointment.time(),
+                appointment.appointmentId()
+        );
+
+        apptsByTime.remove(key);
+
+        undoStack.push(new Action(ActionType.CANCEL_APPT, appointment));
+
+        return Result.ok(null, "Appointment cancelled successfully.");
     }
 
     @Override
     public Result<Appointment> findAppointment(String appointmentId) {
-        // TODO: use hash table
-        throw new UnsupportedOperationException("TODO: ClinicServiceImpl.findAppointment");
+        if (appointmentId == null) {
+            return Result.fail("Appointment ID is required.");
+        }
+
+        Appointment appointment = apptsById.get(appointmentId);
+        if (appointment == null) {
+            return Result.fail("Appointment not found.");
+        }
+
+        return Result.ok(appointment, "Appointment found.");
     }
 
     @Override
     public List<Appointment> viewDay(LocalDate date) {
-        // TODO: in-order traverse AVL and filter by date, OR implement date range traversal
-        return new ArrayList<>();
+        List<Appointment> dayList = new ArrayList<>();
+        if (date == null) {
+            return dayList;
+        }
+
+        apptsByTime.inOrder((key, appt) -> {
+            if (key.date().equals(date)) {
+                dayList.add(appt);
+            }
+        });
+
+        return dayList;
     }
 
     @Override
     public List<Appointment> viewRange(LocalDate date, LocalTime start, LocalTime end) {
-        // TODO: range query traversal on AVL for (date,start) .. (date,end)
-        return new ArrayList<>();
+        List<Appointment> rangeList = new ArrayList<>();
+        if (date == null || start == null || end == null) {
+            return rangeList;
+        }
+
+        apptsByTime.inOrder((key, appt) -> {
+            if (key.date().equals(date)) {
+                if (!key.time().isBefore(start)) {
+                    if (!key.time().isAfter(end)) {
+                        rangeList.add(appt);
+                    }
+                }
+            }
+        });
+
+        return rangeList;
     }
 
     @Override
