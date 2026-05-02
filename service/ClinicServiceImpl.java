@@ -49,7 +49,6 @@ public class ClinicServiceImpl implements ClinicService {
 
         Patient p = new Patient(id, name, phone);
         patientsById.put(id, p);
-        undoStack.push(new Action(ActionType.ADD_PATIENT, p));
         return Result.ok(null, "Patient added");
     }
 
@@ -68,7 +67,6 @@ public class ClinicServiceImpl implements ClinicService {
         if (p == null) {
             return Result.fail("Patient not found");
         }
-        undoStack.push(new Action(ActionType.DELETE_PATIENT, p));
         return Result.ok(null, "Patient deleted");
     }
 
