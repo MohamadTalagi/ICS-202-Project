@@ -67,4 +67,47 @@ public class LinkedQueue<T> {
 
         return list;
     }
+
+
+    //Extra method to utilize for the undo operation.
+    public void remove(T item) {
+        if (front == null) {
+            return;
+        }
+
+        if (front.data.equals(item)) {
+            front = front.next;
+            if (front == null) {
+                front = null;
+            }
+            return;
+        }
+
+        Node<T> current = front;
+        while (current.next != null) {
+            if (current.next.data.equals(item)) {
+                current.next = current.next.next;
+                if (current.next == null) {
+                    rear = current;
+                }
+                return;
+            }
+            current = current.next;
+        }
+    }
+
+    public void pushFront(T item) {
+        if (item == null) {
+            return;
+        }
+        Node<T> newNode = new Node<>(item);
+        if (isEmpty()) {
+            front = rear = newNode;
+        } else {
+            newNode.next = front;
+            front = newNode;
+        }
+    }
+
+
 }

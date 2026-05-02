@@ -4,6 +4,7 @@ import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
 import kfupm.clinic.api.Result;
 import kfupm.clinic.ds.*;
@@ -245,61 +246,51 @@ public class ClinicServiceImpl implements ClinicService {
     @Override
     public Result<VisitLogEntry> serveNext(String doctor, String note) {
         if (doctor == null || doctor.isBlank()) {
-            return Result.fail("Doctor is required.");
+            return Result.fail("Doctor name is required to serve a patient.");
         }
 
-        Patient patient;
-        String type;
+        Patient p = null;
+        Object originalObject = null;
+        String type = "";
 
-        // 1. Serve urgent patients first
         if (!urgentHeap.isEmpty()) {
-            UrgentPatient urgent = urgentHeap.pop();
-            patient = urgent.patient();
+            UrgentPatient up = urgentHeap.pop();
+            p = up.patient();
+            originalObject = up;
             type = "URGENT";
-        }
-
-        // 2. Then serve walk-ins
-        else if (!walkIns.isEmpty()) {
-            patient = walkIns.dequeue();
+        } else if (!walkIns.isEmpty()) {
+            p = walkIns.dequeue();
+            originalObject = p;
             type = "WALKIN";
+        } else {
+            AVLTree.Entry<AppointmentKey, Appointment> entry = apptsByTime.minEntry();
+            if (entry != null) {
+                Appointment appt = entry.value();
+                p = patientsById.get(appt.patientId());
+                originalObject = appt;
+                type = "APPOINTMENT";
+                apptsByTime.remove(entry.key());
+                apptsById.remove(appt.appointmentId());
+            }
         }
 
-        // 3. Then serve earliest appointment
-        else {
-            AVLTree.Entry<AppointmentKey, Appointment> entry = apptsByTime.minEntry();
-
-            if (entry == null) {
-                return Result.fail("No patients waiting.");
-            }
-
-            Appointment appt = entry.value();
-
-            apptsByTime.remove(entry.key());
-            apptsById.remove(appt.appointmentId());
-
-            Patient existingPatient = patientsById.get(appt.patientId());
-
-            if (existingPatient != null) {
-                patient = existingPatient;
-            } else {
-                patient = new Patient(appt.patientId(), appt.patientName(), appt.phone());
-            }
-
-            type = "APPOINTMENT";
+        if (p == null) {
+            return Result.fail("No patients waiting in any category.");
         }
 
         VisitLogEntry logEntry = new VisitLogEntry(
                 System.currentTimeMillis(),
-                patient.id(),
-                patient.name(),
+                p.id(),
+                p.name(),
                 type,
                 doctor,
                 note
         );
 
         log.addLast(logEntry);
+        undoStack.push(new Action(ActionType.SERVE, originalObject));
 
-        return Result.ok(logEntry, "Patient served.");
+        return Result.ok(logEntry, "Patient served successfully.");
     }
 
     @Override
@@ -336,11 +327,55 @@ public class ClinicServiceImpl implements ClinicService {
 
     @Override
     public Result<Action> undo() {
-        // TODO: pop undo stack and reverse last action
-        throw new UnsupportedOperationException("TODO: ClinicServiceImpl.undo");
+        if (undoStack.isEmpty()) {
+            return Result.fail("Nothing to undo.");
+        }
+
+        Action lastAction = undoStack.pop();
+        ActionType type = lastAction.type();
+        Object payload = lastAction.payload();
+
+        if (type == ActionType.ADD_APPT) {
+            Appointment a = (Appointment) payload;
+            AppointmentKey key = new AppointmentKey(a.date(), a.time(), a.appointmentId());
+            apptsById.remove(a.appointmentId());
+            apptsByTime.remove(key);
+        }
+        else if (type == ActionType.CANCEL_APPT) {
+            Appointment a = (Appointment) payload;
+            AppointmentKey key = new AppointmentKey(a.date(), a.time(), a.appointmentId());
+            apptsById.put(a.appointmentId(), a);
+            apptsByTime.put(key, a);
+        }
+        else if (type == ActionType.ADD_WALKIN) {
+            Patient p = (Patient) payload;
+            walkIns.remove(p);
+        }
+        else if (type == ActionType.ADD_URGENT) {
+            UrgentPatient up = (UrgentPatient) payload;
+            urgentHeap.remove(up);
+        }
+        else if (type == ActionType.SERVE) {
+            //Remove from end of log because log.addLast was used
+            log.removeLast();
+
+            if (payload instanceof UrgentPatient up) {
+                urgentHeap.push(up); // Re-heapify
+            }
+            else if (payload instanceof Patient p) {
+                //return it to front of queue to keep FIFO order
+                walkIns.pushFront(p);
+            }
+            else if (payload instanceof Appointment a) {
+                AppointmentKey key = new AppointmentKey(a.date(), a.time(), a.appointmentId());
+                apptsByTime.put(key, a);
+                apptsById.put(a.appointmentId(), a);
+            }
+        }
+
+        return Result.ok(lastAction, "State restored successfully.");
     }
 
-    // Helpers you may want
     private String newAppointmentId() {
         String id = "A" + nextApptId;
         nextApptId = nextApptId + 1;

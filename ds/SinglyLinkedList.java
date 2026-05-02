@@ -83,4 +83,24 @@ public class SinglyLinkedList<T> {
     public int size() {
         return size;
     }
+
+    //Additional method to help in undo()
+    public T removeLast() {
+        if (head == null) {
+            return null;
+        }
+        T data = tail.data;
+        if (head == tail) {
+            head = tail = null;
+        } else {
+            Node<T> current = head;
+            while (current.next != tail) {
+                current = current.next;
+            }
+            current.next = null;
+            tail = current;
+        }
+        size--;
+        return data;
+    }
 }

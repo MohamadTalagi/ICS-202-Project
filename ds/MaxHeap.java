@@ -107,4 +107,26 @@ public class MaxHeap<T> {
 
         return snapshot;
     }
+
+    //Extra Method Added to Help with the undo operation
+    public void remove(T item) {
+        int index = -1;
+        for (int i = 0; i < size; i++) {
+            if (heap[i].equals(item)) {
+                index = i;
+                break;
+            }
+        }
+
+        if (index != -1) {
+            size = size - 1;
+            heap[index] = heap[size];
+            heap[size] = null;
+
+            if (index < size) {
+                percolateDown(index);
+                percolateUp(index);
+            }
+        }
+    }
 }
